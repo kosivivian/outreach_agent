@@ -181,6 +181,8 @@ export function FinalReport({ data }: { data: RunData }) {
 
   if (!v) return null
   const approved = run.overall_status === 'approved'
+  // A paused/errored run has an unresolved request (e.g. "search for more") — this report predates it.
+  const stale = ['paused', 'error'].includes(run.overall_status)
   const byId = new Map(leads.map((l) => [l.id, l]))
   const flagged = v.flagged_leads.map((id) => byId.get(id)).filter((l): l is NonNullable<typeof l> => !!l)
   const regenerable = flagged.filter((l) => l.selected).map((l) => l.id)
@@ -190,6 +192,7 @@ export function FinalReport({ data }: { data: RunData }) {
   const done = CHECKLIST.filter(([k]) => checks[k]).length
   const blockers = [
     safetyFails > 0 && 'Safety checks failed',
+    stale && 'Run is paused — resume it above',
     v.shortfall && run.shortfall_choice !== 'submit_fewer' && 'Pick a shortfall option',
     !v.pass && !approveAnyway && 'Score below 0.80',
     done < CHECKLIST.length && `Checklist ${done}/${CHECKLIST.length}`,
@@ -220,15 +223,22 @@ export function FinalReport({ data }: { data: RunData }) {
           <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-amber-900">
             <AlertTriangle className="h-3.5 w-3.5" />Found {v.qualified_lead_count} of {run.target_lead_count}. How do you want to continue?
           </div>
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-            {SHORTFALL_OPTIONS.map((o) => (
-              <button key={o.option} title={o.detail} disabled={shortfall.isPending} onClick={() => shortfall.mutate(o.option)}
-                className={cn('rounded-md border bg-background px-3 py-2 text-left text-xs transition-colors hover:border-foreground/40 disabled:opacity-60', run.shortfall_choice === o.key && 'border-foreground ring-1 ring-foreground')}>
-                <div className="font-medium">{o.title}</div>
-                <div className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{o.detail}</div>
-              </button>
-            ))}
-          </div>
+          {stale ? (
+            <div className="flex items-center gap-1.5 rounded-md border border-amber-200 bg-background px-3 py-2 text-xs text-amber-900">
+              <Info className="h-3.5 w-3.5 shrink-0" />
+              This report is from before your last request — it hasn't finished yet. Click <b>Resume</b> above to continue it before choosing again.
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+              {SHORTFALL_OPTIONS.map((o) => (
+                <button key={o.option} title={o.detail} disabled={shortfall.isPending} onClick={() => shortfall.mutate(o.option)}
+                  className={cn('rounded-md border bg-background px-3 py-2 text-left text-xs transition-colors hover:border-foreground/40 disabled:opacity-60', run.shortfall_choice === o.key && 'border-foreground ring-1 ring-foreground')}>
+                  <div className="font-medium">{o.title}</div>
+                  <div className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{o.detail}</div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
