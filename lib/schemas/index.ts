@@ -20,7 +20,7 @@ export const createRunSchema = z.object({
 })
 
 /** Case, spacing and trailing punctuation don't make an objective different. */
-export const normalizeObjective = (s: string) => s.toLowerCase().replace(/s+/g, ' ').trim().replace(/[.!?,;:s]+$/, '')
+export const normalizeObjective = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim().replace(/[.!?,;:\s]+$/, '')
 
 export const icpSchema = z.object({
   target_company_type: z.string().min(1),
